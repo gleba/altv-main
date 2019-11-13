@@ -1,0 +1,52 @@
+version: "3"
+volumes:
+  npm_cache:
+networks:
+  web:
+    external:
+      name: web
+services:
+  nats:
+    image: nats
+    # entrypoint: "/gnatsd -DV --auth 'd35877b9a2a7e63d2ec45a0dd35877b9a2a7'"
+    ports:
+      - "4222:4222"
+    expose:
+      - 4222
+      - 8222
+      - 8222/udp
+
+    networks:
+      - web
+  altv:
+    build:
+      context: ./altv-main
+    restart: always
+    ports:
+      - "7788:7788"
+      - "7788:7788/udp"
+    depends_on:
+      - nats
+    links:
+      - nats
+    networks:
+      - web
+  gta:
+    build:
+      context: ./nodejs
+    restart: always
+    expose:
+      - 80
+    volumes:
+      - npm_cache:/root/node_modules
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gta.rule=Host(`gta.unq.onl`)"
+      - "traefik.http.routers.gta.entrypoints=web"
+#      - "traefik.http.routers.gta.middlewares=gta"
+#      - "traefik.http.middlewares.gta.redirectscheme.scheme=https"
+      - "traefik.http.routers.gta5.rule=Host(`gta.unq.onl`)"
+      - "traefik.http.routers.gta5.entrypoints=websecure"
+      - "traefik.http.routers.gta5.tls.certresolver=myhttpchallenge"
